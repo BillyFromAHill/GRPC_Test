@@ -18,7 +18,7 @@ namespace ClientApp
 
         public async Task StartReceiving(CancellationToken cancellationToken)
         {
-            while (cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                var messageString = await Console.In.ReadLineAsync();
 
