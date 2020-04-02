@@ -3,17 +3,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Queries;
+
 
 namespace ServerApp
 {
     public class CommandReceiver
     {
         private readonly IMediator _mediator;
-        private readonly ILogger _logger;
+        private readonly ILogger<CommandReceiver> _logger;
 
-        public CommandReceiver(IMediator mediator, ILogger logger)
+        public CommandReceiver(IMediator mediator, ILogger<CommandReceiver> logger)
         {
             _mediator = mediator;
             _logger = logger;
@@ -39,8 +40,9 @@ namespace ServerApp
                         continue;
                     }
 
-                    if (!commandArgs[0].Equals("print"))
+                    if (!commandArgs[0].Trim().ToLower().Equals("print"))
                     {
+                        Console.WriteLine("Unknown command. Enter 'print [offset] [count]' to show records.");
                         continue;
                     }
 
@@ -82,7 +84,7 @@ namespace ServerApp
                 }
             }
 
-            _logger.Log(LogLevel.Info, "Message receiving has stopped.");
+            _logger.Log(LogLevel.Information, "Message receiving has stopped.");
         }
     }
 }

@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using NLog.Extensions.Logging;
 using Persistence;
+using Queries;
 
 namespace ServerApp
 {
@@ -40,7 +41,10 @@ namespace ServerApp
                 throw;
             }
 
-            var finishedTask = await Task.WhenAny();
+            await using var commandReceiverScope = Container.BeginLifetimeScope();
+            var commandReceiver = commandReceiverScope.Resolve<CommandReceiver>();
+
+            var finishedTask = await Task.WhenAny(commandReceiver.StartReceiving(CancellationTokenSource.Token));
             if (finishedTask.IsFaulted)
             {
                 Console.WriteLine("Looks like something went wrong. See logs for details.");
@@ -56,8 +60,8 @@ namespace ServerApp
         private static void InitDi(IConfigurationRoot config)
         {
             var builder = new ContainerBuilder();
-            builder.AddMediatR();
-            
+            builder.AddMediatR(typeof(MessageQueryHandler).Assembly, typeof(MessagesQuery).Assembly, typeof(ClientMessage).Assembly);
+
             builder.Register(componentContext =>
                 {
                     var optionsBuilder = new DbContextOptionsBuilder<ServerDbContext>()
@@ -65,6 +69,8 @@ namespace ServerApp
                     return optionsBuilder.Options;
                 }).As<DbContextOptions>()
                 .InstancePerLifetimeScope();
+
+            builder.RegisterType<CommandReceiver>();
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(b => b.AddNLog("nlog.config"));
