@@ -9,11 +9,8 @@ using MessageSender;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NLog;
-using NLog.Config;
 using NLog.Extensions.Logging;
-using NLog.Targets;
 using Persistence;
 using Persistence.Repositories;
 using LogLevel = NLog.LogLevel;
@@ -29,10 +26,6 @@ namespace ClientApp
         static async Task Main(string[] args)
         {
             var logger = LogManager.LoadConfiguration("nlog.config").GetCurrentClassLogger();
-
-            MessageReceiver messageReceiver;
-            MessageSender.MessageSender messageSender;
-
             try
             {
                 var config = new ConfigurationBuilder()
@@ -40,12 +33,10 @@ namespace ClientApp
                     .AddEnvironmentVariables()
                     .AddCommandLine(args)
                     .Build();
-
+                
                 InitDi(config);
 
                 MigrateDb();
-
-
             }
             catch (Exception e)
             {
@@ -54,10 +45,10 @@ namespace ClientApp
             }
 
             await using var receiverScope = Container.BeginLifetimeScope();
-            messageReceiver = receiverScope.Resolve<MessageReceiver>();
+            var messageReceiver = receiverScope.Resolve<MessageReceiver>();
 
             await using var senderScope = Container.BeginLifetimeScope();
-            messageSender = senderScope.Resolve<MessageSender.MessageSender>();
+            var messageSender = senderScope.Resolve<MessageSender.MessageSender>();
 
             var finishedTask = await Task.WhenAny(
                 messageReceiver.StartReceiving(CancellationTokenSource.Token),
@@ -91,7 +82,7 @@ namespace ClientApp
                     return optionsBuilder.Options;
                 }).As<DbContextOptions>()
                 .InstancePerLifetimeScope();
-
+            
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(b => b.AddNLog("nlog.config"));
 
