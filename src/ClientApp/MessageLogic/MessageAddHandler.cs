@@ -21,12 +21,12 @@ namespace MessageLogic
         {
             if (string.IsNullOrEmpty(request.Message))
             {
-                return Result.Failure<long, string>("Сообщение должно быть непустым.");
+                return Result.Failure<long, string>("Message must be not empty");
             }
 
             if (request.Message.Length > MessageMaxSize)
             {
-                return Result.Failure<long, string>($"Сообщение должно иметь длину не более {MessageMaxSize} символов.");
+                return Result.Failure<long, string>($"Message must be no longer than {MessageMaxSize}.");
             }
 
             var messageId = await _messageRepository.SaveMessageAsync(request.Message, cancellationToken);

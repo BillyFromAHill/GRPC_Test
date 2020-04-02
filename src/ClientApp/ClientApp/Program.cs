@@ -15,7 +15,7 @@ namespace ClientApp
     {
         private static IContainer Container { get; set; }
 
-        private static readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private static readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
         static async Task Main(string[] args)
         {
@@ -24,8 +24,16 @@ namespace ClientApp
             MigrateDb();
 
             var messageReceiver = Container.Resolve<MessageReceiver>();
+            var messageSender = Container.Resolve<MessageSender.MessageSender>();
 
-            await Task.WhenAny(messageReceiver.StartReceiving(_cancellationTokenSource.Token));
+            var finishedTask = await Task.WhenAny(
+                messageReceiver.StartReceiving(CancellationTokenSource.Token),
+                messageSender.StartSending(CancellationTokenSource.Token));
+
+            if (finishedTask.IsFaulted)
+            {
+                Console.WriteLine("Looks like something went wrong. See logs for details.");
+            }
         }
 
         private static void MigrateDb()
@@ -37,12 +45,12 @@ namespace ClientApp
         private static void InitDi()
         {
             var builder = new ContainerBuilder();
-            builder.AddMediatR(typeof(MessageAddedEvent).Assembly, typeof(MessageAddedEventHandler).Assembly);
+            builder.AddMediatR(typeof(MessageAddedEvent).Assembly, typeof(MessageAddedEventHandler).Assembly, typeof(SendQueueRequestHandler).Assembly);
             builder.RegisterType<MessageOutboxRepository>().AsImplementedInterfaces();
             builder.RegisterType<MessageRepository>().AsImplementedInterfaces();
             builder.RegisterType<MessageReceiver>();
-            
-            
+            builder.RegisterType<MessageSender.MessageSender>();
+
             builder.Register(componentContext =>
                 {
                     var optionsBuilder = new DbContextOptionsBuilder<MessagesDbContext>()

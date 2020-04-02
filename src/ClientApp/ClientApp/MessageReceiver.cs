@@ -16,15 +16,20 @@ namespace ClientApp
             _mediator = mediator;
         }
 
-        public async Task StartReceiving(CancellationToken cancellationToken)
+        public Task StartReceiving(CancellationToken cancellationToken)
+        {
+            return Task.Factory.StartNew(async () => { await RunMessageLoop(cancellationToken); }, TaskCreationOptions.LongRunning);
+        }
+
+        private async Task RunMessageLoop(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-               var messageString = await Console.In.ReadLineAsync();
+                var messageString = await Console.In.ReadLineAsync();
 
-               var (_, isFailure, _, error) = await _mediator.Send(new MessageAddRequest(messageString), cancellationToken);
+                var (_, isFailure, _, error) = await _mediator.Send(new MessageAddRequest(messageString), cancellationToken);
 
-               Console.WriteLine(isFailure ? $"Сообщение не принято. {error}" : $"Сообщение принято.");
+                Console.WriteLine(isFailure ? $"Сообщение не принято. {error}" : $"Сообщение принято.");
             }
         }
     }
