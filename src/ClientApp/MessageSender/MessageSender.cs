@@ -37,32 +37,36 @@ namespace MessageSender
             {
                 try
                 {
-                    var channel = GrpcChannel.ForAddress("https://localhost:5001");
+                    using var channel = GrpcChannel.ForAddress("https://localhost:5001");
                     var client = new MessagesService.MessagesServiceClient(channel);
 
                     var messagesChunk = (await _mediator.Send(new SendQueueRequest(_chunkSize), cancellationToken)).ToList();
 
+                    if (!messagesChunk.Any())
+                    {
+                        continue;
+                    }
+
                     var messageList = new MessageList();
-                    messageList.Messages.AddRange(messagesChunk.Select(m => new MessageDto {ClientId = "123", Content = m.Content, MessageId = m.Id}));
+                    messageList.ClientId = "123";
+                    messageList.Messages.AddRange(messagesChunk.Select(m => new MessageDto
+                        {Content = m.Content, MessageId = m.Id, CreatedAt = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(m.CreatedAt)}));
 
                     await client.SendMessagesAsync(messageList);
 
-                    foreach (var message in messagesChunk)
-                    {
-                        //TODO: send here
-                    }
-
-                    //await _messageOutboxRepository.MarkSent(messagesChunk.Select(m => m.Id), cancellationToken);
+                    await _messageOutboxRepository.MarkSent(messagesChunk.Select(m => m.Id), cancellationToken);
                     await Task.Delay((int) _delayMs, cancellationToken);
 
                     if (!messagesChunk.Any())
                     {
                         await Task.Delay((int) _delayMs, cancellationToken);
                     }
+
                 }
                 catch (RpcException ex)
                 {
                     _logger.Log(LogLevel.Error, ex.ToString());
+                    await Task.Delay((int) _delayMs, cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {

@@ -29,6 +29,7 @@ namespace MessageLogic
                 return Result.Failure<long, string>($"Message must be no longer than {MessageMaxSize}.");
             }
 
+            // This calls should be done in one opened in mediator transaction. Now it's not safe.
             var messageId = await _messageRepository.SaveMessageAsync(request.Message, cancellationToken);
             await _mediator.Publish(new MessageAddedEvent(messageId), cancellationToken);
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MessageReceiver;
+using Microsoft.EntityFrameworkCore;
 
 namespace Persistence
 {
@@ -16,12 +17,22 @@ namespace Persistence
             _dbContext = dbContext;
         }
 
-        public async Task SaveMessages(IEnumerable<MessageReceiver.ClientMessage> messages, CancellationToken cancellationToken)
+        public async Task SaveMessages(MessageList messageList, CancellationToken cancellationToken)
         {
-            await _dbContext.AddRangeAsync(messages.Select(
+            var messageIds = messageList.Messages.Select(m => m.MessageId).ToList();
+
+            var existingMessages = await _dbContext.Set<ClientMessage>()
+                .Where(cm => cm.ClientId == messageList.ClientId)
+                .Where(cm => messageIds.Contains(cm.MessageId))
+                .ToListAsync(cancellationToken);
+
+            var messageToAdd = messageList.Messages.Where(m => !existingMessages.Select(em => em.MessageId).ToList().Contains(m.MessageId));
+
+            // CLient id should be moved to separate table.
+            await _dbContext.Set<ClientMessage>().AddRangeAsync(messageToAdd.Select(
                 m => new ClientMessage
                 {
-                    ClientId = m.ClientId, Content = m.Content, CreatedAt = m.CreatedAt, IpAddress = m.IpAddress, MessageId = m.MessageId,
+                    ClientId = messageList.ClientId, Content = m.Content, CreatedAt = m.CreatedAt, IpAddress = m.IpAddress, MessageId = m.MessageId,
                     ReceivedAt = DateTimeOffset.Now
                 }), cancellationToken);
 

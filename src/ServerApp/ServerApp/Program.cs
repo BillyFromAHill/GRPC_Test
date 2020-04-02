@@ -63,7 +63,7 @@ namespace ServerApp
             dbContext.Database.Migrate();
         }
 
-        private static void InitDi(IConfigurationRoot config)
+        private static void InitDi(IConfiguration config)
         {
             var builder = new ContainerBuilder();
             builder.AddMediatR(typeof(MessageQueryHandler).Assembly, typeof(MessagesQuery).Assembly, typeof(ClientMessage).Assembly);
@@ -71,6 +71,7 @@ namespace ServerApp
             PopulateBuilder(builder);
 
             AppHost = Host.CreateDefaultBuilder()
+                .ConfigureLogging(logging => logging.AddNLog("nlog.config"))
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory(PopulateBuilder))
                 .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); }).Build();
 

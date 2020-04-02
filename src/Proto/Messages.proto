@@ -1,23 +1,24 @@
 syntax = "proto3";
-
+import "google/protobuf/timestamp.proto";
 option csharp_namespace = "Services";
 
 package Message;
 
 service MessagesService {
-  rpc SendMessages (MessageList) returns (SaveResult);
+  rpc SendMessages (MessageList) returns (SkippedMessages);
 }
 
 message MessageList {
-  repeated MessageDto messages = 1;
+  string ClientId = 1;
+  repeated MessageDto Messages = 2;
 }
 
 message MessageDto{
   string Content = 1;
   int64 MessageId = 2;
-  string ClientId = 3;
+  google.protobuf.Timestamp CreatedAt = 3;
 }
 
-message SaveResult {
-  int64 message = 1;
+message SkippedMessages {
+  repeated MessageDto Messages = 1;
 }

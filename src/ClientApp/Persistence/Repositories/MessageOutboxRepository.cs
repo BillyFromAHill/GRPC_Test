@@ -21,6 +21,7 @@ namespace Persistence.Repositories
         public async Task AddMessageAsync(long messageId, CancellationToken cancellationToken)
         {
             await _messagesDbContext.Set<MessageOutbox>().AddAsync(new MessageOutbox {MessageId = messageId, SentAt = null}, CancellationToken.None);
+            await _messagesDbContext.SaveChangesAsync(cancellationToken);
         }
 
         public async Task MarkSent(IEnumerable<long> messageId, CancellationToken cancellationToken)

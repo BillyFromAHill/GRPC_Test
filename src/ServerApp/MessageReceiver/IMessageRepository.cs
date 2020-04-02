@@ -6,6 +6,6 @@ namespace MessageReceiver
 {
     public interface IMessageRepository
     {
-        Task SaveMessages(IEnumerable<ClientMessage> message, CancellationToken cancellationToken);
+        Task SaveMessages(MessageList messageList, CancellationToken cancellationToken);
     }
 }
