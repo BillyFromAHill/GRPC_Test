@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Persistence.Models
 {
-    public class MessageOutboxItem : IEntityTypeConfiguration<MessageOutboxItem>
+    public class MessageOutbox : IEntityTypeConfiguration<MessageOutbox>
     {
         public long MessageId { get; set; }
 
@@ -12,11 +12,11 @@ namespace Persistence.Models
 
         public virtual Message Message { get; set; }
 
-        public void Configure(EntityTypeBuilder<MessageOutboxItem> builder)
+        public void Configure(EntityTypeBuilder<MessageOutbox> builder)
         {
             builder.HasKey(mo => mo.MessageId);
 
-            builder.HasOne(mo => mo.Message).WithOne().HasForeignKey<MessageOutboxItem>(mo => mo.MessageId);
+            builder.HasOne(mo => mo.Message).WithOne().HasForeignKey<MessageOutbox>(mo => mo.MessageId);
 
             builder.HasIndex(mo => mo.SentAt);
         }

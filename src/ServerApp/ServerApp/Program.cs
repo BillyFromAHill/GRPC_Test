@@ -3,10 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using GrpcService;
 using MediatR.Extensions.Autofac.DependencyInjection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NLog;
 using NLog.Extensions.Logging;
 using Persistence;
@@ -17,6 +20,8 @@ namespace ServerApp
     class Program
     {
         private static IContainer Container { get; set; }
+
+        private static IHost AppHost { get; set; }
 
         private static readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
@@ -44,7 +49,8 @@ namespace ServerApp
             await using var commandReceiverScope = Container.BeginLifetimeScope();
             var commandReceiver = commandReceiverScope.Resolve<CommandReceiver>();
 
-            var finishedTask = await Task.WhenAny(commandReceiver.StartReceiving(CancellationTokenSource.Token));
+            var finishedTask = await Task.WhenAny(commandReceiver.StartReceiving(CancellationTokenSource.Token),
+                AppHost.RunAsync(CancellationTokenSource.Token));
             if (finishedTask.IsFaulted)
             {
                 Console.WriteLine("Looks like something went wrong. See logs for details.");
@@ -62,6 +68,17 @@ namespace ServerApp
             var builder = new ContainerBuilder();
             builder.AddMediatR(typeof(MessageQueryHandler).Assembly, typeof(MessagesQuery).Assembly, typeof(ClientMessage).Assembly);
 
+            PopulateBuilder(builder);
+
+            AppHost = Host.CreateDefaultBuilder()
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory(PopulateBuilder))
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); }).Build();
+
+            Container = builder.Build();
+        }
+
+        private static void PopulateBuilder(ContainerBuilder builder)
+        {
             builder.Register(componentContext =>
                 {
                     var optionsBuilder = new DbContextOptionsBuilder<ServerDbContext>()
@@ -77,8 +94,7 @@ namespace ServerApp
 
             builder.Populate(serviceCollection);
             builder.RegisterType<ServerDbContext>().InstancePerLifetimeScope();
-
-            Container = builder.Build();
+            builder.RegisterType<MessageRepository>().AsImplementedInterfaces();
         }
     }
 }

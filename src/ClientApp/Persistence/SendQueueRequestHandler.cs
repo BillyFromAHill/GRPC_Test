@@ -22,7 +22,7 @@ namespace Persistence
 
         public async Task<IEnumerable<Message>> Handle(SendQueueRequest request, CancellationToken cancellationToken)
         {
-            return (await _messagesDbContext.Set<MessageOutboxItem>()
+            return (await _messagesDbContext.Set<MessageOutbox>()
                     .Include(mo => mo.Message)
                     .Where(mo => !mo.SentAt.HasValue)
                     .Take((int) request.ChunkSize)

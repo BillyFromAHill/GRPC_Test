@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "Services";
+
+package Message;
+
+service MessagesService {
+  rpc SendMessages (MessageList) returns (SaveResult);
+}
+
+message MessageList {
+  repeated MessageDto messages = 1;
+}
+
+message MessageDto{
+  string Content = 1;
+  int64 MessageId = 2;
+  string ClientId = 3;
+}
+
+message SaveResult {
+  int64 message = 1;
+}

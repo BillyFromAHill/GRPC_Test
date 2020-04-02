@@ -20,13 +20,13 @@ namespace Persistence.Repositories
 
         public async Task AddMessageAsync(long messageId, CancellationToken cancellationToken)
         {
-            await _messagesDbContext.Set<MessageOutboxItem>().AddAsync(new MessageOutboxItem {MessageId = messageId, SentAt = null}, CancellationToken.None);
+            await _messagesDbContext.Set<MessageOutbox>().AddAsync(new MessageOutbox {MessageId = messageId, SentAt = null}, CancellationToken.None);
         }
 
         public async Task MarkSent(IEnumerable<long> messageId, CancellationToken cancellationToken)
         {
             // Definitely not optimal solution.
-            var chunk = await _messagesDbContext.Set<MessageOutboxItem>().Where(mo => messageId.Contains(mo.MessageId)).ToListAsync(cancellationToken);
+            var chunk = await _messagesDbContext.Set<MessageOutbox>().Where(mo => messageId.Contains(mo.MessageId)).ToListAsync(cancellationToken);
             foreach (var message in chunk)
             {
                 message.SentAt = DateTimeOffset.Now;
