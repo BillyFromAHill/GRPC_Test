@@ -19,7 +19,7 @@ namespace Persistence
         {
             _messagesDbContext = messagesDbContext;
         }
-        
+
         public async Task<IEnumerable<Message>> Handle(SendQueueRequest request, CancellationToken cancellationToken)
         {
             return (await _messagesDbContext.Set<MessageOutbox>()

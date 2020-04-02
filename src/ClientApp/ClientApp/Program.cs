@@ -2,12 +2,21 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using MediatR.Extensions.Autofac.DependencyInjection;
 using MessageLogic;
 using MessageSender;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NLog;
+using NLog.Config;
+using NLog.Extensions.Logging;
+using NLog.Targets;
 using Persistence;
 using Persistence.Repositories;
+using LogLevel = NLog.LogLevel;
 
 namespace ClientApp
 {
@@ -19,12 +28,36 @@ namespace ClientApp
 
         static async Task Main(string[] args)
         {
-            InitDi();
+            var logger = LogManager.LoadConfiguration("nlog.config").GetCurrentClassLogger();
 
-            MigrateDb();
+            MessageReceiver messageReceiver;
+            MessageSender.MessageSender messageSender;
 
-            var messageReceiver = Container.Resolve<MessageReceiver>();
-            var messageSender = Container.Resolve<MessageSender.MessageSender>();
+            try
+            {
+                var config = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddEnvironmentVariables()
+                    .AddCommandLine(args)
+                    .Build();
+
+                InitDi(config);
+
+                MigrateDb();
+
+
+            }
+            catch (Exception e)
+            {
+                logger.Log(LogLevel.Fatal, $"Can't initialize base services. {e.Message} {e.StackTrace}");
+                throw;
+            }
+
+            await using var receiverScope = Container.BeginLifetimeScope();
+            messageReceiver = receiverScope.Resolve<MessageReceiver>();
+
+            await using var senderScope = Container.BeginLifetimeScope();
+            messageSender = senderScope.Resolve<MessageSender.MessageSender>();
 
             var finishedTask = await Task.WhenAny(
                 messageReceiver.StartReceiving(CancellationTokenSource.Token),
@@ -42,7 +75,7 @@ namespace ClientApp
             dbContext.Database.Migrate();
         }
 
-        private static void InitDi()
+        private static void InitDi(IConfigurationRoot config)
         {
             var builder = new ContainerBuilder();
             builder.AddMediatR(typeof(MessageAddedEvent).Assembly, typeof(MessageAddedEventHandler).Assembly, typeof(SendQueueRequestHandler).Assembly);
@@ -58,6 +91,11 @@ namespace ClientApp
                     return optionsBuilder.Options;
                 }).As<DbContextOptions>()
                 .InstancePerLifetimeScope();
+
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging(b => b.AddNLog("nlog.config"));
+
+            builder.Populate(serviceCollection);
             builder.RegisterType<MessagesDbContext>().InstancePerLifetimeScope();
 
             Container = builder.Build();
