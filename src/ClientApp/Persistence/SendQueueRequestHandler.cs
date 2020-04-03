@@ -22,8 +22,6 @@ namespace Persistence
 
         public async Task<IEnumerable<Message>> Handle(SendQueueRequest request, CancellationToken cancellationToken)
         {
-            var result = _messagesDbContext.Set<Persistence.Models.Message>().ToList();
-
             return (await _messagesDbContext.Set<MessageOutbox>()
                     .Include(mo => mo.Message)
                     .Where(mo => !mo.SentAt.HasValue)

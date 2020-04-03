@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using MediatR;
-using MessageLogic;
 using Microsoft.Extensions.Logging;
 using Services;
 
@@ -18,12 +17,15 @@ namespace MessageSender
         private readonly ILogger<MessageSender> _logger;
         private readonly IMediator _mediator;
         private readonly IMessageOutboxRepository _messageOutboxRepository;
+        private readonly SenderConfiguration _configuration;
 
-        public MessageSender(ILogger<MessageSender> logger, IMediator mediator, IMessageOutboxRepository messageOutboxRepository)
+        public MessageSender(ILogger<MessageSender> logger, IMediator mediator, IMessageOutboxRepository messageOutboxRepository,
+            SenderConfiguration configuration)
         {
             _logger = logger;
             _mediator = mediator;
             _messageOutboxRepository = messageOutboxRepository;
+            _configuration = configuration;
         }
 
         public Task StartSending(CancellationToken cancellationToken)
@@ -37,31 +39,29 @@ namespace MessageSender
             {
                 try
                 {
-                    using var channel = GrpcChannel.ForAddress("https://localhost:5001");
-                    var client = new MessagesService.MessagesServiceClient(channel);
-
                     var messagesChunk = (await _mediator.Send(new SendQueueRequest(_chunkSize), cancellationToken)).ToList();
 
                     if (!messagesChunk.Any())
                     {
+                        await Task.Delay((int) _delayMs, cancellationToken);
                         continue;
                     }
 
+                    using var channel = GrpcChannel.ForAddress(_configuration.BaseUrl);
+                    var client = new MessagesService.MessagesServiceClient(channel);
+
                     var messageList = new MessageList();
-                    messageList.ClientId = "123";
+                    messageList.ClientId = _configuration.ClientId;
                     messageList.Messages.AddRange(messagesChunk.Select(m => new MessageDto
                         {Content = m.Content, MessageId = m.Id, CreatedAt = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(m.CreatedAt)}));
 
-                    await client.SendMessagesAsync(messageList);
-
-                    await _messageOutboxRepository.MarkSent(messagesChunk.Select(m => m.Id), cancellationToken);
-                    await Task.Delay((int) _delayMs, cancellationToken);
-
-                    if (!messagesChunk.Any())
+                    var result = await client.SendMessagesAsync(messageList);
+                    foreach (var message in result.Messages)
                     {
-                        await Task.Delay((int) _delayMs, cancellationToken);
+                        _logger.Log(LogLevel.Warning, $"Looks like something wrong with message with id '{message.MessageId}'. It was skipped by server.");
                     }
 
+                    await _messageOutboxRepository.MarkSent(messagesChunk.Select(m => m.Id), cancellationToken);
                 }
                 catch (RpcException ex)
                 {
@@ -79,7 +79,7 @@ namespace MessageSender
                 }
             }
 
-            _logger.Log(LogLevel.Information, "Message send has stopped.");
+            _logger.Log(LogLevel.Information, "Message sending has stopped.");
         }
     }
 }

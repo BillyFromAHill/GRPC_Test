@@ -10,7 +10,7 @@ namespace Persistence.Models
 
         public DateTimeOffset? SentAt { get; set; }
 
-        public virtual Message Message { get; set; }
+        public virtual Message? Message { get; set; }
 
         public void Configure(EntityTypeBuilder<MessageOutbox> builder)
         {

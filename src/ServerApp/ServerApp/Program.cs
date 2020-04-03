@@ -10,10 +10,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Extensions.Logging;
 using Persistence;
 using Queries;
+using LogLevel = NLog.LogLevel;
 
 namespace ServerApp
 {
@@ -31,7 +33,7 @@ namespace ServerApp
             try
             {
                 var config = new ConfigurationBuilder()
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddJsonFile("appsettings.json")
                     .AddEnvironmentVariables()
                     .AddCommandLine(args)
                     .Build();
@@ -68,22 +70,28 @@ namespace ServerApp
             var builder = new ContainerBuilder();
             builder.AddMediatR(typeof(MessageQueryHandler).Assembly, typeof(MessagesQuery).Assembly, typeof(ClientMessage).Assembly);
 
-            PopulateBuilder(builder);
+            PopulateAutofacBuilder(builder, config);
 
             AppHost = Host.CreateDefaultBuilder()
-                .ConfigureLogging(logging => logging.AddNLog("nlog.config"))
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory(PopulateBuilder))
+                .ConfigureLogging(PopulateLogging)
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory(b => PopulateAutofacBuilder(b, config)))
                 .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); }).Build();
 
             Container = builder.Build();
         }
 
-        private static void PopulateBuilder(ContainerBuilder builder)
+        private static void PopulateLogging(ILoggingBuilder logging)
+        {
+            logging.ClearProviders();
+            logging.AddNLog("nlog.config");
+        }
+        
+        private static void PopulateAutofacBuilder(ContainerBuilder builder, IConfiguration config)
         {
             builder.Register(componentContext =>
                 {
                     var optionsBuilder = new DbContextOptionsBuilder<ServerDbContext>()
-                        .UseSqlite("Data Source=./Messages.db");
+                        .UseSqlite(config.GetConnectionString("default"));
                     return optionsBuilder.Options;
                 }).As<DbContextOptions>()
                 .InstancePerLifetimeScope();

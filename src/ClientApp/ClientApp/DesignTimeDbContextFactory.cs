@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 using Persistence;
 
 namespace ClientApp
@@ -8,7 +9,13 @@ namespace ClientApp
     {
         public MessagesDbContext CreateDbContext(string[] args)
         {
-            return new MessagesDbContext(new DbContextOptionsBuilder<MessagesDbContext>().UseSqlite("Data Source=./Messages.db").Options);
+            var config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .AddCommandLine(args)
+                .Build();
+
+            return new MessagesDbContext(new DbContextOptionsBuilder<MessagesDbContext>().UseSqlite(config.GetConnectionString("default")).Options);
         }
     }
 }

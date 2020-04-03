@@ -32,6 +32,10 @@ namespace ServerApp
                 try
                 {
                     var commandString = await Console.In.ReadLineAsync();
+                    if (string.IsNullOrEmpty(commandString?.Trim()))
+                    {
+                        continue;
+                    }
 
                     var commandArgs = commandString.Split(" ", StringSplitOptions.RemoveEmptyEntries).ToList();
 
@@ -60,7 +64,7 @@ namespace ServerApp
 
                     if (count > 1000)
                     {
-                        Console.WriteLine($"Count {count} is too large specify lower value");
+                        Console.WriteLine($"Count {count} is too large. Specify lower value");
                         continue;
                     }
 
@@ -71,7 +75,7 @@ namespace ServerApp
                     }
 
                     Console.WriteLine(
-                        $"Messages from {offset} to {offset + count}. Total records: {messagesPage.TotalCount}. To show more records write 'print [offset] [count]'");
+                        $"Messages from {offset} to {offset + count}. Total records: {messagesPage.TotalCount}. To show more records enter 'print [offset] [count]'");
                 }
                 catch (OperationCanceledException)
                 {

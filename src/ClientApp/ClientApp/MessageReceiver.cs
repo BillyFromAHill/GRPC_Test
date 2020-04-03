@@ -21,7 +21,7 @@ namespace ClientApp
 
         public Task StartReceiving(CancellationToken cancellationToken)
         {
-            return Task.Run(async () => {  await RunMessageLoop(cancellationToken); }, cancellationToken);
+            return Task.Run(async () => { await RunMessageLoop(cancellationToken); }, cancellationToken);
         }
 
         private async Task RunMessageLoop(CancellationToken cancellationToken)
@@ -31,6 +31,11 @@ namespace ClientApp
                 try
                 {
                     var messageString = await Console.In.ReadLineAsync();
+
+                    if (string.IsNullOrEmpty(messageString?.Trim()))
+                    {
+                        continue;
+                    }
 
                     var (_, isFailure, _, error) = await _mediator.Send(new MessageAddRequest(messageString), cancellationToken);
 

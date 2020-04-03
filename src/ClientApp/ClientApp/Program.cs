@@ -29,11 +29,11 @@ namespace ClientApp
             try
             {
                 var config = new ConfigurationBuilder()
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddJsonFile("appsettings.json")
                     .AddEnvironmentVariables()
                     .AddCommandLine(args)
                     .Build();
-                
+
                 InitDi(config);
 
                 MigrateDb();
@@ -75,14 +75,17 @@ namespace ClientApp
             builder.RegisterType<MessageReceiver>();
             builder.RegisterType<MessageSender.MessageSender>();
 
+            var serverConfigSection = config.GetSection("serverConnection");
+            builder.Register((ctx) => new SenderConfiguration(serverConfigSection.GetValue<Uri>("baseUrl"), serverConfigSection.GetValue<string>("clientId")));
+
             builder.Register(componentContext =>
                 {
                     var optionsBuilder = new DbContextOptionsBuilder<MessagesDbContext>()
-                        .UseSqlite("Data Source=./Messages.db");
+                        .UseSqlite(config.GetConnectionString("default"));
                     return optionsBuilder.Options;
                 }).As<DbContextOptions>()
                 .InstancePerLifetimeScope();
-            
+
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(b => b.AddNLog("nlog.config"));
 
