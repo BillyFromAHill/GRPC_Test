@@ -71,7 +71,7 @@ namespace ServerApp
                     var messagesPage = await _mediator.Send(new MessagesQuery(offset, count), cancellationToken);
                     foreach (var message in messagesPage.Messages)
                     {
-                        Console.WriteLine($"{message.ClientIp} - {message.Content}");
+                        Console.WriteLine($"{message.ClientIp} - {message.CreatedAt:g} - {message.Content}");
                     }
 
                     Console.WriteLine(

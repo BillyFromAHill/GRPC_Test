@@ -21,7 +21,7 @@ namespace Persistence
             var count = await _dbContext.Set<ClientMessage>().CountAsync(cancellationToken);
 
             var messages = await _dbContext.Set<ClientMessage>().Skip((int) request.Offset).Take((int) request.Count).ToListAsync(cancellationToken);
-            return new MessagePage(messages.Select(m => new Message(m.Content, m.IpAddress)), request.Offset, (ulong) count);
+            return new MessagePage(messages.Select(m => new Message(m.Content, m.IpAddress, m.CreatedAt)), request.Offset, (ulong) count);
         }
     }
 }
