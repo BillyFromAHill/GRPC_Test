@@ -75,7 +75,7 @@ namespace ServerApp
             AppHost = Host.CreateDefaultBuilder()
                 .ConfigureLogging(PopulateLogging)
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory(b => PopulateAutofacBuilder(b, config)))
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); }).Build();
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseConfiguration(config).UseStartup<Startup>(); }).Build();
 
             Container = builder.Build();
         }
